@@ -6,3 +6,6 @@ env/
 venv/
 
 .DS_Store
+
+./data/
+./notebooks/
