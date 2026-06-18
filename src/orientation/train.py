@@ -124,9 +124,7 @@ def main() -> None:
     parser.add_argument("--patience", type=int, default=8)
     parser.add_argument("--freeze-epochs", type=int, default=5)
     args = parser.parse_args()
-    train(args.data, args.out, args.epochs, args.lr, args.batch_size,
-          args.patience, args.freeze_epochs)
-
+    train(args.data, args.out, args.epochs, args.lr, args.batch_size, args.patience, args.freeze_epochs)
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,13 @@
+[project]
+name = "sudoku-cv"
+version = "0.1.0"
+description = "Computer-vision pipeline that reads, solves, and overlays Sudoku puzzles"
+requires-python = ">=3.11"
+dependencies = [
+    "opencv-python>=4.8",
+    "numpy>=1.24",
+    "kaggle>=1.6",
+    "torch>=2.12.1",
+    "torchvision>=0.27.1",
+    "pillow>=12.2.0",
+]

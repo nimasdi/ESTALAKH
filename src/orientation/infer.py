@@ -11,9 +11,7 @@ import torch
 
 DEFAULT_CHECKPOINT = ROOT / "src" / "models" / "orientation_best.pth"
 
-# cv2 rotation codes to make the image upright again
-# If the model predicts label L (L×90° CW was applied to a correct image),
-# apply (4-L)×90° CW to recover upright orientation.
+
 _CORRECTION_CODE = {
     0: None,
     1: cv2.ROTATE_90_COUNTERCLOCKWISE,
@@ -68,7 +66,6 @@ def _build_transform():
 
 
 def correct_orientation(img_bgr, checkpoint = DEFAULT_CHECKPOINT, device = "cpu"):
-    """One-shot convenience wrapper (loads model each call — use OrientationCorrector for batch)."""
     corrector = OrientationCorrector(checkpoint, device)
     return corrector.correct(img_bgr)
 
