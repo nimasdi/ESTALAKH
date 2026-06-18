@@ -1,42 +1,17 @@
-import os
+from pathlib import Path
 
 import torch
 import torch.nn as nn
-from PIL import Image
-from torch.utils.data import DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader
 from torchvision.models import EfficientNet
 from torchvision.transforms import transforms
 
+from src.recognition.dataset import DigitFinetuneDataset
 from src.recognition.model import load_base_model
 
-
-class Chars74KDigits1to9(Dataset):
-    def __init__(self, root_dir, transform=None):
-        self.root_dir = root_dir
-        self.transform = transform
-        self.image_paths = []
-        self.labels = []
-
-        for label in range(2, 11):
-            if label < 10:
-                label_dir = os.path.join(self.root_dir, f"Sample00{label}")
-            else:
-                label_dir = os.path.join(self.root_dir, f"Sample0{label}")
-            for filename in os.listdir(label_dir):
-                if filename.endswith((".jpg", ".png")):
-                    self.image_paths.append(os.path.join(label_dir, filename))
-                    self.labels.append(label - 2)
-
-    def __len__(self):
-        return len(self.image_paths)
-
-    def __getitem__(self, idx):
-        image_path = self.image_paths[idx]
-        label = self.labels[idx]
-        image = Image.open(image_path).convert("RGB")
-        if self.transform:
-            image = self.transform(image)
-        return image, label
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = PROJECT_ROOT / "data" / "digit_finetune_dataset"
+MODEL_PATH = PROJECT_ROOT / "src" / "models" / "best_model.pth"
 
 
 def train(model: EfficientNet, loader: DataLoader, criterion, optimizer, device):
@@ -89,15 +64,11 @@ def main():
             transforms.Normalize((0.5,), (0.5,)),
         ]
     )
-
-    dataset = Chars74KDigits1to9("../../data/English/Fnt", transform=transform)
-    dataset_length = len(dataset)
-    train_size = int(0.8 * dataset_length)
-    val_size = dataset_length - train_size
-    train_set, val_set = random_split(dataset, [train_size, val_size])
+    train_set = DigitFinetuneDataset(DATA_DIR / "train", transform=transform)
+    test_set = DigitFinetuneDataset(DATA_DIR / "test", transform=transform)
 
     train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
-    val_loader = DataLoader(val_set, batch_size=32, shuffle=False)
+    val_loader = DataLoader(test_set, batch_size=32, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_base_model()
@@ -114,7 +85,7 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer_head = torch.optim.Adam(model.classifier.parameters(), lr=1e-3)
 
-    epochs_head = 8
+    epochs_head = 6
     for epoch in range(epochs_head):
         train_loss, train_acc = train(
             model, train_loader, criterion, optimizer_head, device
@@ -147,7 +118,8 @@ def main():
         )
         if val_acc > best_acc:
             best_acc = val_acc
-            torch.save(model.state_dict(), "../models/best_model.pth")
+            MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+            torch.save(model.state_dict(), MODEL_PATH)
 
 
 if __name__ == "__main__":
