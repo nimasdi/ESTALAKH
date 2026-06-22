@@ -65,6 +65,16 @@ def _build_transform():
     ])
 
 
+def predict_orientation(model, image, device=None):
+    if device is None:
+        device = next(model.parameters()).device
+    tensor = _build_transform()(image.convert("RGB")).unsqueeze(0).to(device)
+    model.eval()
+    with torch.no_grad():
+        label = int(model(tensor).argmax(1).item())
+    return label
+
+
 def correct_orientation(img_bgr, checkpoint = DEFAULT_CHECKPOINT, device = "cpu"):
     corrector = OrientationCorrector(checkpoint, device)
     return corrector.correct(img_bgr)
