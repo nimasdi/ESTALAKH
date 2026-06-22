@@ -26,7 +26,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/predict")
+@app.post("/predict/cell")
 async def predict(file: UploadFile = File(...)):
     model = ml.get("recognition")
     if model is None:
