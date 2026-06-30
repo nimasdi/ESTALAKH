@@ -18,3 +18,14 @@ def predict_cell(model, image):
         probs = F.softmax(logits, dim=1)
         predicted_class = torch.argmax(probs, dim=1).item()
     return predicted_class
+
+
+def predict_cell_proba(model, image):
+    model.to(device)
+    tensor = transform(image).unsqueeze(0).to(device)
+    model.eval()
+    with torch.no_grad():
+        probs = F.softmax(model(tensor), dim=1)[0]
+        predicted_class = int(torch.argmax(probs).item())
+        confidence = float(probs[predicted_class].item())
+    return predicted_class, confidence

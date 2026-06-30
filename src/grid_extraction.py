@@ -20,6 +20,14 @@ CELL_MARGIN_RATIO = 0.12
 MIN_GRID_AREA_RATIO = 0.05 
 
 
+ROTATION_CODE = {
+    0: None,
+    1: cv2.ROTATE_90_COUNTERCLOCKWISE,
+    2: cv2.ROTATE_180,
+    3: cv2.ROTATE_90_CLOCKWISE,
+}
+
+
 class GridNotFoundError(RuntimeError):
     """Raised when no plausible Sudoku grid is found in the image."""
 
@@ -111,44 +119,9 @@ def extract_grid(image, keep_stages = False) -> GridExtraction:
     matrix = cv2.getPerspectiveTransform(corners, _warp_destination())
     inverse_matrix = np.linalg.inv(matrix)
 
-    # one problem we had was the hole for 6/8/9 getting filled in by the median blur,
-    # so we use a more permissive threshold to get the grid lines,
-    #  and a more strict one to get the digit mask for cell extraction
     warped = cv2.warpPerspective(normalized, matrix, (WARP_SIZE, WARP_SIZE))
-    warped_blurred = cv2.medianBlur(warped, 3)
-
-    # keeps grid lines thick enough for boundary detection
-    warped_binary = cv2.adaptiveThreshold(
-        warped_blurred, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 10,
-    )
-    # C=15 removes noise pixels
-    # line geometry from warped_binary is applied to it
-    warped_binary_clean = cv2.adaptiveThreshold(
-        warped_blurred, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 15,
-    )
-
-    line_free, horizontal_lines, vertical_lines = _remove_grid_lines(warped_binary, warped_binary_clean)
-    row_bounds = _grid_boundaries(horizontal_lines, axis=1)
-    col_bounds = _grid_boundaries(vertical_lines, axis=0)
-
-    if keep_stages:
-        stages["06_warped"] = warped
-        stages["07_warped_binary"] = warped_binary
-        stages["08_lines_removed"] = line_free
-        cell_grid = cv2.cvtColor(warped, cv2.COLOR_GRAY2BGR)
-        for bound in row_bounds:
-            cv2.line(cell_grid, (0, int(bound)), (WARP_SIZE, int(bound)), (0, 255, 0), 1)
-        for bound in col_bounds:
-            cv2.line(cell_grid, (int(bound), 0), (int(bound), WARP_SIZE), (0, 255, 0), 1)
-        stages["09_cell_grid"] = cell_grid
-
-    cells = [
-        _extract_cell(line_free, warped, row_bounds, col_bounds, row, col)
-        for row in range(9)
-        for col in range(9)
-    ]
+    cells, warp_stages = _process_warp(warped, keep_stages=keep_stages)
+    stages.update(warp_stages)
 
     return GridExtraction(
         corners=corners,
@@ -165,6 +138,91 @@ def _warp_destination() -> np.ndarray:
     return np.array(
         [[0, 0], [WARP_SIZE - 1, 0], [WARP_SIZE - 1, WARP_SIZE - 1], [0, WARP_SIZE - 1]],
         dtype=np.float32,
+    )
+
+
+def _process_warp(warped, keep_stages=False):
+    warped_blurred = cv2.medianBlur(warped, 3)
+
+    # one problem we had was the hole for 6/8/9 getting filled in by the median
+    # blur, so we use a more permissive threshold to keep grid lines thick enough
+    # for boundary detection, and a stricter one for the digit mask.
+    warped_binary = cv2.adaptiveThreshold(
+        warped_blurred, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 10,
+    )
+    # C=15 removes noise pixels; line geometry from warped_binary is applied to it
+    warped_binary_clean = cv2.adaptiveThreshold(
+        warped_blurred, 255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, 15,
+    )
+
+    line_free, horizontal_lines, vertical_lines = _remove_grid_lines(warped_binary, warped_binary_clean)
+    row_bounds = _grid_boundaries(horizontal_lines, axis=1)
+    col_bounds = _grid_boundaries(vertical_lines, axis=0)
+
+    cells = [
+        _extract_cell(line_free, warped, row_bounds, col_bounds, row, col)
+        for row in range(9)
+        for col in range(9)
+    ]
+
+    stages = {}
+    if keep_stages:
+        stages["06_warped"] = warped
+        stages["07_warped_binary"] = warped_binary
+        stages["08_lines_removed"] = line_free
+        cell_grid = cv2.cvtColor(warped, cv2.COLOR_GRAY2BGR)
+        for bound in row_bounds:
+            cv2.line(cell_grid, (0, int(bound)), (WARP_SIZE, int(bound)), (0, 255, 0), 1)
+        for bound in col_bounds:
+            cv2.line(cell_grid, (int(bound), 0), (int(bound), WARP_SIZE), (0, 255, 0), 1)
+        stages["09_cell_grid"] = cell_grid
+
+    return cells, stages
+
+
+
+
+def _rotation_homography(label, size=WARP_SIZE):
+    w = size - 1
+    label %= 4
+    if label == 0:
+        return np.eye(3, dtype=np.float64)
+    if label == 1: 
+        return np.array([[0, 1, 0], [-1, 0, w], [0, 0, 1]], dtype=np.float64)
+    if label == 2:
+        return np.array([[-1, 0, w], [0, -1, w], [0, 0, 1]], dtype=np.float64)
+    return np.array([[0, -1, w], [1, 0, 0], [0, 0, 1]], dtype=np.float64)
+
+
+def rotate_extraction(extraction: GridExtraction, label: int, keep_stages: bool = False) -> GridExtraction:
+    label %= 4
+    if label == 0:
+        return extraction
+
+    new_warped = cv2.rotate(extraction.warped, ROTATION_CODE[label])
+    rot = _rotation_homography(label)
+    new_matrix = rot @ extraction.matrix  # source -> old warp -> upright warp
+    new_inverse = np.linalg.inv(new_matrix)
+
+    cells, warp_stages = _process_warp(new_warped, keep_stages=keep_stages)
+
+    new_stages = {}
+    if keep_stages:
+        new_stages = {
+            k: v for k, v in extraction.stages.items()
+            if not k.startswith(("06", "07", "08", "09"))
+        }
+        new_stages.update(warp_stages)
+
+    return GridExtraction(
+        corners=extraction.corners,
+        matrix=new_matrix,
+        inverse_matrix=new_inverse,
+        warped=new_warped,
+        cells=cells,
+        stages=new_stages,
     )
 
 
@@ -249,8 +307,6 @@ def _locate_grid(binary, blurred) -> np.ndarray | None:
 
 
 def _corners_from_hough(blurred, min_area) -> np.ndarray | None:
-    print("herehereedfjkahfjhfhjdhfkakj")
-
     edges = cv2.Canny(blurred, 50, 150)
     threshold = max(80, min(blurred.shape) // 4)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold)

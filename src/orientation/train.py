@@ -12,13 +12,14 @@ import torch.nn as nn
 
 
 def train(
-    data_root= "data/orientation_dataset",
+    data_root= "data/orientation_warped_dataset",
     out_dir = "src/models",
     epochs = 30,
     lr = 1e-4,
     batch_size = 32,
     patience = 8,
     freeze_epochs = 5,
+    checkpoint_name = "orientation_warp.pth",
 ):
     from src.orientation.model import build_model
     from src.orientation.dataset import make_loaders
@@ -46,11 +47,16 @@ def train(
 
     # Phase 1: freeze backbone, train head only
     model = build_model(pretrained=True, freeze_backbone=True).to(device)
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=lr * 10)
-    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.AdamW(
+        filter(lambda p: p.requires_grad, model.parameters()), lr=lr * 10, weight_decay=1e-4
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=freeze_epochs)
+    
+    # label smoothing softens the symmetric 0/180 (and 90/270) confusions
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
     best_val_acc = 0.0
-    best_path = out_dir / "orientation_best.pth"
+    best_path = out_dir / checkpoint_name
     no_improve = 0
 
     for epoch in range(1, epochs + 1):
@@ -59,7 +65,10 @@ def train(
             print(f"\n[epoch {epoch}] unfreezing backbone")
             for p in model.parameters():
                 p.requires_grad = True
-            optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, T_max=max(1, epochs - freeze_epochs)
+            )
 
         model.train()
         t0 = time.time()
@@ -75,13 +84,16 @@ def train(
             correct += (logits.argmax(1) == labels).sum().item()
             total += len(labels)
 
+        scheduler.step()
+
         train_acc = correct / total
-        val_acc = _evaluate(model, val_loader, device)
+        val_acc, _ = _evaluate(model, val_loader, device)
         elapsed = time.time() - t0
         print(
             f"epoch {epoch:3d}/{epochs}  "
             f"loss={running_loss/total:.4f}  "
             f"train={train_acc:.3f}  val={val_acc:.3f}  "
+            f"lr={optimizer.param_groups[0]['lr']:.2e}  "
             f"({elapsed:.1f}s)"
         )
 
@@ -98,33 +110,47 @@ def train(
     print(f"\nbest val acc: {best_val_acc:.3f}  (saved to {best_path})")
 
     model.load_state_dict(torch.load(best_path, map_location=device))
-    test_acc = _evaluate(model, test_loader, device)
+    test_acc, conf = _evaluate(model, test_loader, device)
     print(f"test acc: {test_acc:.3f}")
+    _print_confusion(conf)
 
 
-def _evaluate(model: nn.Module, loader, device: str) -> float:
+def _evaluate(model: nn.Module, loader, device: str):
     model.eval()
     correct, total = 0, 0
+    conf = [[0] * 4 for _ in range(4)]
     with torch.no_grad():
         for imgs, labels in loader:
             imgs, labels = imgs.to(device), labels.to(device)
             preds = model(imgs).argmax(1)
             correct += (preds == labels).sum().item()
             total += len(labels)
-    return correct / total if total else 0.0
+            for t, p in zip(labels.tolist(), preds.tolist()):
+                conf[t][p] += 1
+    return (correct / total if total else 0.0), conf
+
+
+def _print_confusion(conf) -> None:
+    names = ["0", "90", "180", "270"]
+    print("confusion (rows=true, cols=pred):")
+    print("        " + "".join(f"{n:>6}" for n in names))
+    for i, row in enumerate(conf):
+        print(f"  {names[i]:>4}  " + "".join(f"{c:>6}" for c in row))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data", default="data/orientation_dataset")
+    parser.add_argument("--data", default="data/orientation_warped_dataset")
     parser.add_argument("--out", default="src/models")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--patience", type=int, default=8)
     parser.add_argument("--freeze-epochs", type=int, default=5)
+    parser.add_argument("--checkpoint-name", default="orientation_warp.pth")
     args = parser.parse_args()
-    train(args.data, args.out, args.epochs, args.lr, args.batch_size, args.patience, args.freeze_epochs)
+    train(args.data, args.out, args.epochs, args.lr, args.batch_size, args.patience,
+          args.freeze_epochs, args.checkpoint_name)
 
 if __name__ == "__main__":
     main()

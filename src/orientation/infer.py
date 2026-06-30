@@ -11,6 +11,8 @@ import torch
 
 DEFAULT_CHECKPOINT = ROOT / "src" / "models" / "orientation_best.pth"
 
+DEFAULT_WARP_CHECKPOINT = ROOT / "src" / "models" / "orientation_warp.pth"
+
 
 _CORRECTION_CODE = {
     0: None,
@@ -58,11 +60,100 @@ class OrientationCorrector:
 
 def _build_transform():
     from torchvision import transforms
+    from src.orientation.dataset import IMG_SIZE, MEAN, STD
     return transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((IMG_SIZE, IMG_SIZE)),
         transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        transforms.Normalize(MEAN, STD),
     ])
+
+
+def predict_warp_orientation(model, warped, device=None):
+    from PIL import Image
+
+    if device is None:
+        device = next(model.parameters()).device
+    if warped.ndim == 2:
+        pil = Image.fromarray(warped).convert("RGB")
+    else:
+        pil = Image.fromarray(cv2.cvtColor(warped, cv2.COLOR_BGR2RGB))
+    tensor = _build_transform()(pil).unsqueeze(0).to(device)
+    model.eval()
+    with torch.no_grad():
+        probs = torch.softmax(model(tensor), dim=1)[0]
+        label = int(probs.argmax().item())
+    return label, probs.cpu().tolist()
+
+
+class WarpOrientationClassifier:
+    def __init__(self, checkpoint=DEFAULT_WARP_CHECKPOINT, device=""):
+        if not device:
+            device = (
+                "cuda" if torch.cuda.is_available()
+                else "mps" if torch.backends.mps.is_available()
+                else "cpu"
+            )
+        self.device = device
+        self.model = _get_model(checkpoint, device)
+
+    def predict(self, warped):
+        return predict_warp_orientation(self.model, warped, self.device)
+
+
+def _count_conflicts(grid):
+    def dup(vals):
+        vals = [v for v in vals if v != 0]
+        return len(vals) - len(set(vals))
+
+    conflicts = 0
+    for i in range(9):
+        conflicts += dup(grid[i])
+        conflicts += dup([grid[r][i] for r in range(9)])
+    for bi in range(0, 9, 3):
+        for bj in range(0, 9, 3):
+            conflicts += dup([grid[r][c] for r in range(bi, bi + 3) for c in range(bj, bj + 3)])
+    return conflicts
+
+
+def _score_rotation(extraction, model):
+    from PIL import Image
+    from src.recognition.infer import predict_cell_proba
+
+    grid = [[0] * 9 for _ in range(9)]
+    confs = []
+    for index, cell in enumerate(extraction.cells):
+        if cell.is_empty:
+            continue
+        row, col = divmod(index, 9)
+        pil = Image.fromarray(cell.image).convert("RGB")
+        value, conf = predict_cell_proba(model, pil)
+        if value == 0:
+            continue
+        grid[row][col] = value
+        confs.append(conf)
+    mean_conf = sum(confs) / len(confs) if confs else 0.0
+    return _count_conflicts(grid), mean_conf
+
+
+def resolve_orientation(extraction, recognition_model=None, checkpoint=None):
+    from src.grid_extraction import rotate_extraction
+
+    classifier = (
+        WarpOrientationClassifier(checkpoint) if checkpoint else WarpOrientationClassifier()
+    )
+    cnn_label, _probs = classifier.predict(extraction.warped)
+
+    if recognition_model is None:
+        return cnn_label
+
+    best = None
+    for j in range(4):
+        candidate = extraction if j == 0 else rotate_extraction(extraction, j)
+        conflicts, mean_conf = _score_rotation(candidate, recognition_model)
+        score = (-conflicts, mean_conf, 1 if j == cnn_label else 0)
+        if best is None or score > best[0]:
+            best = (score, j)
+    return best[1]
 
 
 def predict_orientation(model, image, device=None):
