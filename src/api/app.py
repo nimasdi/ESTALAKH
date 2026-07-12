@@ -161,9 +161,11 @@ async def solve_sudoku(file: UploadFile = File(...), debug: bool = False, stages
     if _grid_score(english_grid, english_confidences) >= _grid_score(persian_grid, persian_confidences):
         grid, confidences = english_grid, english_confidences
         orientation_label = english_orientation_label
+        language = "english"
     else:
         grid, confidences = persian_grid, persian_confidences
         orientation_label = persian_orientation_label
+        language = "persian"
 
     source = file.filename or "upload"
     if debug:
@@ -177,6 +179,7 @@ async def solve_sudoku(file: UploadFile = File(...), debug: bool = False, stages
         "confidences": confidences,
         "given_mask": given_mask,
         "solution": solution,
+        "language": language,
         "orientation": {"label": orientation_label, "degrees": _DEGREES[orientation_label]},
     }
 
@@ -187,7 +190,7 @@ async def solve_sudoku(file: UploadFile = File(...), debug: bool = False, stages
         response["error"] = "Could not solve the recognized grid — likely a misread digit."
         return response
 
-    overlay_image = render_solution(bgr_image, extraction, solution, given_mask)
+    overlay_image = render_solution(bgr_image, extraction, solution, given_mask, language=language)
     response["overlay_image"] = _encode_image(overlay_image)
     return response
 
