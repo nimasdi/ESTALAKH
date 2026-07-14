@@ -13,7 +13,7 @@ from PIL import Image
 from pathlib import Path
 
 from src.grid_extraction import GridExtraction, GridNotFoundError, cell_montage, extract_grid, rotate_extraction
-from src.orientation.infer import DEFAULT_WARP_CHECKPOINT, _DEGREES, resolve_orientation
+from src.orientation.infer import DEFAULT_WARP_CHECKPOINT, _DEGREES, _count_conflicts, resolve_orientation
 from src.overlay import render_solution
 from src.recognition.infer import predict_cell, predict_cell_proba
 from src.recognition.model import load_model as load_torch_recognition_model
@@ -113,10 +113,10 @@ def predict_grid(persian_model, extraction: GridExtraction) -> tuple[list[list[i
     return grid, confidences
 
 
-def _grid_score(grid: list[list[int]], confidences: list[list[float]]) -> tuple[int, float]:
+def _grid_score(grid: list[list[int]], confidences: list[list[float]]) -> tuple[int, int, float]:
     values = [confidences[r][c] for r in range(9) for c in range(9) if grid[r][c] != 0]
     avg_confidence = sum(values) / len(values) if values else 0.0
-    return len(values), avg_confidence
+    return -_count_conflicts(grid), len(values), avg_confidence
 
 
 def _encode_image(image: np.ndarray) -> str:
@@ -160,18 +160,23 @@ async def solve_sudoku(file: UploadFile = File(...), debug: bool = False, stages
     english_grid, english_confidences = predict_grid(english_model, english_extraction)
     persian_grid, persian_confidences = predict_grid(persian_model, persian_extraction)
     
+    
     if _grid_score(english_grid, english_confidences) >= _grid_score(persian_grid, persian_confidences):
+        print("Choosing English grid based on score")
         grid, confidences = english_grid, english_confidences
         orientation_label = english_orientation_label
         language = "english"
+        chosen_extraction = english_extraction
     else:
+        print("Choosing Persian grid based on score")
         grid, confidences = persian_grid, persian_confidences
         orientation_label = persian_orientation_label
         language = "persian"
+        chosen_extraction = persian_extraction
 
     source = file.filename or "upload"
     if debug:
-        _save_extraction(extraction, grid, Path("out/solve") / Path(source).stem)
+        _save_extraction(chosen_extraction, grid, Path("out/solve") / Path(source).stem)
 
     solution = solve(grid)
 
@@ -186,13 +191,13 @@ async def solve_sudoku(file: UploadFile = File(...), debug: bool = False, stages
     }
 
     if stages:
-        response["stages"] = {name: _encode_image(img) for name, img in extraction.stages.items()}
+        response["stages"] = {name: _encode_image(img) for name, img in chosen_extraction.stages.items()}
 
     if solution is None:
         response["error"] = "Could not solve the recognized grid — likely a misread digit."
         return response
 
-    overlay_image = render_solution(bgr_image, extraction, solution, given_mask, language=language)
+    overlay_image = render_solution(bgr_image, chosen_extraction, solution, given_mask, language=language)
     response["overlay_image"] = _encode_image(overlay_image)
     return response
 
