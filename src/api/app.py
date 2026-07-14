@@ -162,13 +162,11 @@ async def solve_sudoku(file: UploadFile = File(...), debug: bool = False, stages
     
     
     if _grid_score(english_grid, english_confidences) >= _grid_score(persian_grid, persian_confidences):
-        print("Choosing English grid based on score")
         grid, confidences = english_grid, english_confidences
         orientation_label = english_orientation_label
         language = "english"
         chosen_extraction = english_extraction
     else:
-        print("Choosing Persian grid based on score")
         grid, confidences = persian_grid, persian_confidences
         orientation_label = persian_orientation_label
         language = "persian"
