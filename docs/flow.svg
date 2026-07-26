@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="433pt" height="837pt" viewBox="0.00 0.00 433.00 837.00">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 833.18)">
+<title>GridExtraction</title>
+<!-- input -->
+<g id="node1" class="node">
+<title>input</title>
+<ellipse fill="#dbe7f5" stroke="#4a5a6a" cx="210.44" cy="-811.18" rx="45.46" ry="18"/>
+<text xml:space="preserve" text-anchor="middle" x="210.44" y="-807.88" font-family="Helvetica,sans-Serif" font-size="11.00">Input image</text>
+</g>
+<!-- gray -->
+<g id="node2" class="node">
+<title>gray</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M278.88,-757.18C278.88,-757.18 141.99,-757.18 141.99,-757.18 135.99,-757.18 129.99,-751.18 129.99,-745.18 129.99,-745.18 129.99,-733.18 129.99,-733.18 129.99,-727.18 135.99,-721.18 141.99,-721.18 141.99,-721.18 278.88,-721.18 278.88,-721.18 284.88,-721.18 290.88,-727.18 290.88,-733.18 290.88,-733.18 290.88,-745.18 290.88,-745.18 290.88,-751.18 284.88,-757.18 278.88,-757.18"/>
+<text xml:space="preserve" text-anchor="middle" x="210.44" y="-742.48" font-family="Helvetica,sans-Serif" font-size="11.00">Grayscale + polarity fix</text>
+<text xml:space="preserve" text-anchor="middle" x="210.44" y="-729.28" font-family="Helvetica,sans-Serif" font-size="11.00">(dark-on-light ⇄ light-on-dark)</text>
+</g>
+<!-- input&#45;&gt;gray -->
+<g id="edge1" class="edge">
+<title>input-&gt;gray</title>
+<path fill="none" stroke="#5a6a7a" d="M210.44,-792.88C210.44,-785.59 210.44,-776.91 210.44,-768.72"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="213.94,-768.8 210.44,-758.8 206.94,-768.8 213.94,-768.8"/>
+</g>
+<!-- binary -->
+<g id="node3" class="node">
+<title>binary</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M301.53,-685.18C301.53,-685.18 119.35,-685.18 119.35,-685.18 113.35,-685.18 107.35,-679.18 107.35,-673.18 107.35,-673.18 107.35,-661.18 107.35,-661.18 107.35,-655.18 113.35,-649.18 119.35,-649.18 119.35,-649.18 301.53,-649.18 301.53,-649.18 307.53,-649.18 313.53,-655.18 313.53,-661.18 313.53,-661.18 313.53,-673.18 313.53,-673.18 313.53,-679.18 307.53,-685.18 301.53,-685.18"/>
+<text xml:space="preserve" text-anchor="middle" x="210.44" y="-670.48" font-family="Helvetica,sans-Serif" font-size="11.00">CLAHE + denoise + adaptive threshold</text>
+<text xml:space="preserve" text-anchor="middle" x="210.44" y="-657.28" font-family="Helvetica,sans-Serif" font-size="11.00">→ binary</text>
+</g>
+<!-- gray&#45;&gt;binary -->
+<g id="edge2" class="edge">
+<title>gray-&gt;binary</title>
+<path fill="none" stroke="#5a6a7a" d="M210.44,-720.88C210.44,-713.59 210.44,-704.91 210.44,-696.72"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="213.94,-696.8 210.44,-686.8 206.94,-696.8 213.94,-696.8"/>
+</g>
+<!-- corners -->
+<g id="node4" class="node">
+<title>corners</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M312.52,-613.18C312.52,-613.18 108.35,-613.18 108.35,-613.18 102.35,-613.18 96.35,-607.18 96.35,-601.18 96.35,-601.18 96.35,-589.18 96.35,-589.18 96.35,-583.18 102.35,-577.18 108.35,-577.18 108.35,-577.18 312.52,-577.18 312.52,-577.18 318.52,-577.18 324.52,-583.18 324.52,-589.18 324.52,-589.18 324.52,-601.18 324.52,-601.18 324.52,-607.18 318.52,-613.18 312.52,-613.18"/>
+<text xml:space="preserve" text-anchor="middle" x="210.44" y="-598.48" font-family="Helvetica,sans-Serif" font-size="11.00">Locate the 4 grid corners</text>
+<text xml:space="preserve" text-anchor="middle" x="210.44" y="-585.28" font-family="Helvetica,sans-Serif" font-size="11.00">(on a downscaled copy for speed/accuracy)</text>
+</g>
+<!-- binary&#45;&gt;corners -->
+<g id="edge3" class="edge">
+<title>binary-&gt;corners</title>
+<path fill="none" stroke="#5a6a7a" d="M210.44,-648.88C210.44,-641.59 210.44,-632.91 210.44,-624.72"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="213.94,-624.8 210.44,-614.8 206.94,-624.8 213.94,-624.8"/>
+</g>
+<!-- strategies -->
+<g id="node5" class="node">
+<title>strategies</title>
+<polygon fill="#fff6d8" stroke="#4a5a6a" points="234.87,-541.18 0,-541.18 0,-505.18 240.87,-505.18 240.87,-535.18 234.87,-541.18"/>
+<polyline fill="none" stroke="#4a5a6a" points="234.87,-541.18 234.87,-535.18"/>
+<polyline fill="none" stroke="#4a5a6a" points="240.87,-535.18 234.87,-535.18"/>
+<text xml:space="preserve" text-anchor="middle" x="120.44" y="-520.48" font-family="Helvetica,sans-Serif" font-size="9.00">contour+quad → minAreaRect fallback → Hough fallback</text>
+</g>
+<!-- corners&#45;&gt;strategies -->
+<g id="edge4" class="edge">
+<title>corners-&gt;strategies</title>
+<path fill="none" stroke="#5a6a7a" stroke-dasharray="5,2" d="M188.19,-576.88C174.34,-566.11 156.6,-552.31 142.74,-541.53"/>
+</g>
+<!-- order -->
+<g id="node6" class="node">
+<title>order</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M330.36,-541.18C330.36,-541.18 270.51,-541.18 270.51,-541.18 264.51,-541.18 258.51,-535.18 258.51,-529.18 258.51,-529.18 258.51,-517.18 258.51,-517.18 258.51,-511.18 264.51,-505.18 270.51,-505.18 270.51,-505.18 330.36,-505.18 330.36,-505.18 336.36,-505.18 342.36,-511.18 342.36,-517.18 342.36,-517.18 342.36,-529.18 342.36,-529.18 342.36,-535.18 336.36,-541.18 330.36,-541.18"/>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-526.48" font-family="Helvetica,sans-Serif" font-size="11.00">Order corners</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-513.28" font-family="Helvetica,sans-Serif" font-size="11.00">(tl, tr, br, bl)</text>
+</g>
+<!-- corners&#45;&gt;order -->
+<g id="edge5" class="edge">
+<title>corners-&gt;order</title>
+<path fill="none" stroke="#5a6a7a" d="M232.68,-576.88C243.72,-568.3 257.23,-557.79 269.27,-548.42"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="271.19,-551.36 276.94,-542.46 266.9,-545.84 271.19,-551.36"/>
+</g>
+<!-- refine -->
+<g id="node7" class="node">
+<title>refine</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M383.57,-469.18C383.57,-469.18 217.3,-469.18 217.3,-469.18 211.3,-469.18 205.3,-463.18 205.3,-457.18 205.3,-457.18 205.3,-445.18 205.3,-445.18 205.3,-439.18 211.3,-433.18 217.3,-433.18 217.3,-433.18 383.57,-433.18 383.57,-433.18 389.57,-433.18 395.57,-439.18 395.57,-445.18 395.57,-445.18 395.57,-457.18 395.57,-457.18 395.57,-463.18 389.57,-469.18 383.57,-469.18"/>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-454.48" font-family="Helvetica,sans-Serif" font-size="11.00">Refine: warp once, re-detect edges,</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-441.28" font-family="Helvetica,sans-Serif" font-size="11.00">map back more precisely</text>
+</g>
+<!-- order&#45;&gt;refine -->
+<g id="edge6" class="edge">
+<title>order-&gt;refine</title>
+<path fill="none" stroke="#5a6a7a" d="M300.44,-504.88C300.44,-497.59 300.44,-488.91 300.44,-480.72"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="303.94,-480.8 300.44,-470.8 296.94,-480.8 303.94,-480.8"/>
+</g>
+<!-- warp -->
+<g id="node8" class="node">
+<title>warp</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M360.64,-397.18C360.64,-397.18 240.23,-397.18 240.23,-397.18 234.23,-397.18 228.23,-391.18 228.23,-385.18 228.23,-385.18 228.23,-373.18 228.23,-373.18 228.23,-367.18 234.23,-361.18 240.23,-361.18 240.23,-361.18 360.64,-361.18 360.64,-361.18 366.64,-361.18 372.64,-367.18 372.64,-373.18 372.64,-373.18 372.64,-385.18 372.64,-385.18 372.64,-391.18 366.64,-397.18 360.64,-397.18"/>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-382.48" font-family="Helvetica,sans-Serif" font-size="11.00">Perspective warp</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-369.28" font-family="Helvetica,sans-Serif" font-size="11.00">→ 450×450 top-down view</text>
+</g>
+<!-- refine&#45;&gt;warp -->
+<g id="edge7" class="edge">
+<title>refine-&gt;warp</title>
+<path fill="none" stroke="#5a6a7a" d="M300.44,-432.88C300.44,-425.59 300.44,-416.91 300.44,-408.72"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="303.94,-408.8 300.44,-398.8 296.94,-408.8 303.94,-408.8"/>
+</g>
+<!-- removelines -->
+<g id="node9" class="node">
+<title>removelines</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M378.37,-325.18C378.37,-325.18 222.5,-325.18 222.5,-325.18 216.5,-325.18 210.5,-319.18 210.5,-313.18 210.5,-313.18 210.5,-289.58 210.5,-289.58 210.5,-283.58 216.5,-277.58 222.5,-277.58 222.5,-277.58 378.37,-277.58 378.37,-277.58 384.37,-277.58 390.37,-283.58 390.37,-289.58 390.37,-289.58 390.37,-313.18 390.37,-313.18 390.37,-319.18 384.37,-325.18 378.37,-325.18"/>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-311.28" font-family="Helvetica,sans-Serif" font-size="11.00">Remove grid lines (morphology)</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-298.08" font-family="Helvetica,sans-Serif" font-size="11.00">→ locate the 10 horizontal/vertical</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-284.88" font-family="Helvetica,sans-Serif" font-size="11.00">line boundaries</text>
+</g>
+<!-- warp&#45;&gt;removelines -->
+<g id="edge8" class="edge">
+<title>warp-&gt;removelines</title>
+<path fill="none" stroke="#5a6a7a" d="M300.44,-360.98C300.44,-353.86 300.44,-345.33 300.44,-337"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="303.94,-337.06 300.44,-327.07 296.94,-337.07 303.94,-337.06"/>
+</g>
+<!-- curves -->
+<g id="node10" class="node">
+<title>curves</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M347.49,-241.58C347.49,-241.58 253.38,-241.58 253.38,-241.58 247.38,-241.58 241.38,-235.58 241.38,-229.58 241.38,-229.58 241.38,-205.98 241.38,-205.98 241.38,-199.98 247.38,-193.98 253.38,-193.98 253.38,-193.98 347.49,-193.98 347.49,-193.98 353.49,-193.98 359.49,-199.98 359.49,-205.98 359.49,-205.98 359.49,-229.58 359.49,-229.58 359.49,-235.58 353.49,-241.58 347.49,-241.58"/>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-227.68" font-family="Helvetica,sans-Serif" font-size="11.00">If the page is curved:</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-214.48" font-family="Helvetica,sans-Serif" font-size="11.00">trace lines as curves</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-201.28" font-family="Helvetica,sans-Serif" font-size="11.00">→ 81 per-cell quads</text>
+</g>
+<!-- removelines&#45;&gt;curves -->
+<g id="edge9" class="edge">
+<title>removelines-&gt;curves</title>
+<path fill="none" stroke="#5a6a7a" d="M300.44,-277.22C300.44,-269.81 300.44,-261.44 300.44,-253.4"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="303.94,-253.52 300.44,-243.52 296.94,-253.52 303.94,-253.52"/>
+</g>
+<!-- cells -->
+<g id="node11" class="node">
+<title>cells</title>
+<path fill="#eef2f7" stroke="#4a5a6a" d="M375.91,-157.98C375.91,-157.98 224.96,-157.98 224.96,-157.98 218.96,-157.98 212.96,-151.98 212.96,-145.98 212.96,-145.98 212.96,-133.98 212.96,-133.98 212.96,-127.98 218.96,-121.98 224.96,-121.98 224.96,-121.98 375.91,-121.98 375.91,-121.98 381.91,-121.98 387.91,-127.98 387.91,-133.98 387.91,-133.98 387.91,-145.98 387.91,-145.98 387.91,-151.98 381.91,-157.98 375.91,-157.98"/>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-143.28" font-family="Helvetica,sans-Serif" font-size="11.00">Crop each cell → filter digit mask</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-130.08" font-family="Helvetica,sans-Serif" font-size="11.00">→ normalize to 224×224</text>
+</g>
+<!-- curves&#45;&gt;cells -->
+<g id="edge10" class="edge">
+<title>curves-&gt;cells</title>
+<path fill="none" stroke="#5a6a7a" d="M300.44,-193.63C300.44,-186.11 300.44,-177.68 300.44,-169.8"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="303.94,-169.98 300.44,-159.98 296.94,-169.98 303.94,-169.98"/>
+</g>
+<!-- output -->
+<g id="node12" class="node">
+<title>output</title>
+<ellipse fill="#dbe7f5" stroke="#4a5a6a" cx="300.44" cy="-42.99" rx="124.12" ry="42.99"/>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-59.49" font-family="Helvetica,sans-Serif" font-size="11.00">GridExtraction(</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-46.29" font-family="Helvetica,sans-Serif" font-size="11.00">  corners, matrix, inverse_matrix,</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-33.09" font-family="Helvetica,sans-Serif" font-size="11.00">  warped, cells, cell_quads</text>
+<text xml:space="preserve" text-anchor="middle" x="300.44" y="-19.89" font-family="Helvetica,sans-Serif" font-size="11.00">)</text>
+</g>
+<!-- cells&#45;&gt;output -->
+<g id="edge11" class="edge">
+<title>cells-&gt;output</title>
+<path fill="none" stroke="#5a6a7a" d="M300.44,-121.56C300.44,-114.63 300.44,-106.26 300.44,-97.61"/>
+<polygon fill="#5a6a7a" stroke="#5a6a7a" points="303.94,-97.68 300.44,-87.68 296.94,-97.68 303.94,-97.68"/>
+</g>
+</g>
+</svg>
